@@ -26,7 +26,10 @@ def clean_text(text):
 # Load and train model
 @st.cache_resource
 def train_model():
-    df = pd.read_csv("https://raw.githubusercontent.com/anuoluwapo46/phishing-email-detector/main/Phishing_Email.csv")
+    # Load dataset from Google Drive
+    file_id = "1ipL5E5tGsenFUG-3oW-4HbzgGzRqbbGc"
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    df = pd.read_csv(url)
     df = df.drop(columns=['Unnamed: 0'])
     df = df.dropna(subset=['Email Text'])
     df = df.reset_index(drop=True)
