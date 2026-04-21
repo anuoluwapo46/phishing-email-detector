@@ -3,12 +3,10 @@ import pandas as pd
 import numpy as np
 import re
 import string
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
-import shap
 
 # Page setup
 st.set_page_config(page_title="Phishing Email Detector", page_icon="🛡️")
@@ -18,7 +16,6 @@ st.write("Paste any email text below to check if it is phishing or safe.")
 # Text cleaning function
 def clean_text(text):
     text = text.lower()
-    # Remove non-english characters
     text = text.encode('ascii', 'ignore').decode('ascii')
     text = re.sub(r'\d+', '', text)
     text = text.translate(str.maketrans('', '', string.punctuation))
@@ -47,11 +44,15 @@ def train_model():
         voting='soft'
     )
     ensemble.fit(X, y)
-    return ensemble, tfidf
+    # Get logistic regression coefficients for explanation
+    lr_model = model = ensemble.estimators_[1]
+    feature_names = tfidf.get_feature_names_out()
+    coefficients = lr_model.coef_[0]
+    return ensemble, tfidf, feature_names, coefficients
 
 # Show loading message
 with st.spinner("Loading model... please wait..."):
-    model, tfidf = train_model()
+    model, tfidf, feature_names, coefficients = train_model()
 
 st.success("Model ready!")
 
@@ -79,51 +80,46 @@ if st.button("Check Email"):
         st.write(f"**Safe Probability:** {probability[0]:.2%}")
         st.write(f"**Phishing Probability:** {probability[1]:.2%}")
 
-        # SHAP explanation
+        # Plain English Explanation
         st.markdown("---")
         st.markdown("### 🔍 Why did the model make this decision?")
 
-        lr_model = model.estimators_[1]
-        explainer = shap.LinearExplainer(
-            lr_model, vectorized,
-            feature_perturbation="interventional"
-        )
-        shap_values = explainer.shap_values(vectorized)
-        feature_names = tfidf.get_feature_names_out()
+        # Get words that actually appear in this specific email
+        email_words = set(cleaned.split())
+        word_impacts = []
 
-        # Get top words and their SHAP values
-        shap_array = shap_values[0]
-        top_indices = np.argsort(np.abs(shap_array))[::-1][:10]
-        top_words = [(feature_names[i], shap_array[i]) for i in top_indices
-                     if feature_names[i] in cleaned]
+        for word in email_words:
+            if word in feature_names:
+                idx = list(feature_names).index(word)
+                impact = coefficients[idx]
+                word_impacts.append((word, impact))
 
-        # Show plain English explanation
-        phishing_words = [w for w, v in top_words if v > 0]
-        safe_words = [w for w, v in top_words if v < 0]
+        # Sort by absolute impact
+        word_impacts.sort(key=lambda x: abs(x[1]), reverse=True)
+
+        # Split into phishing and safe words
+        phishing_words = [w for w, v in word_impacts if v > 0][:5]
+        safe_words = [w for w, v in word_impacts if v < 0][:5]
 
         if prediction == 1:
+            st.markdown("#### This email was flagged as **phishing** because:")
             if phishing_words:
-                st.markdown(f"⚠️ The words **{', '.join(phishing_words[:5])}** "
-                           f"strongly suggest this is a **phishing email**.")
+                for word in phishing_words:
+                    st.markdown(f"- 🚩 The word **'{word}'** is commonly found in phishing emails")
             if safe_words:
-                st.markdown(f"✅ However, the words **{', '.join(safe_words[:3])}** "
-                           f"slightly suggested it could be safe, "
-                           f"but were outweighed by suspicious words.")
+                st.markdown("#### These words slightly suggested it could be safe:")
+                for word in safe_words:
+                    st.markdown(f"- ✅ The word **'{word}'** is more common in safe emails")
+            st.markdown(f"> ⚠️ Overall the suspicious words outweighed the safe ones, "
+                       f"giving a **{probability[1]:.2%} phishing probability**.")
         else:
+            st.markdown("#### This email was classified as **safe** because:")
             if safe_words:
-                st.markdown(f"✅ The words **{', '.join(safe_words[:5])}** "
-                           f"strongly suggest this is a **safe email**.")
+                for word in safe_words:
+                    st.markdown(f"- ✅ The word **'{word}'** is commonly found in safe emails")
             if phishing_words:
-                st.markdown(f"⚠️ However, the words **{', '.join(phishing_words[:3])}** "
-                           f"slightly raised suspicion, "
-                           f"but were outweighed by safe indicators.")
-
-        # Also show SHAP chart
-        st.markdown("### 📊 Word Influence Chart")
-        fig, ax = plt.subplots()
-        shap.summary_plot(
-            shap_values, vectorized.toarray(),
-            feature_names=feature_names,
-            max_display=10, show=False
-        )
-        st.pyplot(fig)
+                st.markdown("#### These words slightly raised suspicion:")
+                for word in phishing_words:
+                    st.markdown(f"- 🚩 The word **'{word}'** is sometimes found in phishing emails")
+            st.markdown(f"> ✅ Overall the safe words outweighed the suspicious ones, "
+                       f"giving a **{probability[0]:.2%} safe probability**.")
