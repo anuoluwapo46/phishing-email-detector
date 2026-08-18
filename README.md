@@ -5,18 +5,46 @@ This project is a machine learning-based system that detects phishing emails by 
 
 ## Features
 - Email text preprocessing
-- URL feature extraction
 - Phishing probability prediction
 - Confidence score generation
 - Streamlit web interface
+
+## Objectives
+classify email text as phishing or legitimate;
+apply NLP/text preprocessing and machine-learning techniques;
+provide probability-based predictions;
+provide an interactive web interface.
+
+## Methodology
+Email Input
+     ↓
+Text Cleaning
+     ↓
+TF-IDF Feature Extraction
+     ↓
+ ┌───────────────┐
+ │ Random Forest │
+ │ Logistic Reg. │
+ │ Multinomial NB│
+ └───────────────┘
+     ↓
+Soft Voting Ensemble
+     ↓
+Prediction + Probability
+     ↓
+Plain-English Explanation
 
 ## Technologies Used
 - Python
 - Scikit-learn
 - Pandas
-- NLTK
 - Streamlit
-
+- Numpy
+- TF-IDF
+- Random Forest
+- Logistic Regression
+- Multinominal Naive Bayes
+  
 ## Sample Output
 **Prediction:** Phishing  
 **Confidence:** 96.4%
