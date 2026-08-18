@@ -17,21 +17,37 @@ provide an interactive web interface.
 
 ## Methodology
 Email Input
+
      ↓
+     
 Text Cleaning
+
      ↓
+     
 TF-IDF Feature Extraction
+
      ↓
+     
  ┌───────────────┐
- │ Random Forest │
- │ Logistic Reg. │
- │ Multinomial NB│
+ 
+ │ Random Forest     │
+ 
+ │ Logistic Reg.     │
+ 
+ │ Multinomial NB    │
+ 
  └───────────────┘
+ 
      ↓
+     
 Soft Voting Ensemble
+
      ↓
+     
 Prediction + Probability
+
      ↓
+     
 Plain-English Explanation
 
 ## Technologies Used
